@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "lib": ["es2018", "esnext"],
+    "types": ["node"],
+    "esModuleInterop": true,
+    "target": "esnext",
+    "noImplicitAny": true,
+    "downlevelIteration": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "esnext",
+    "baseUrl": "./src",
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "createFragment",
+    "allowJs": true,
+    "paths": {
+    },
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*", "src/**/*.json"],
+  "typeRoots": ["./node_modules/@types", "src/types"],
+  "exclude": ["node_modules/@opennetwork/vdom"]
+}

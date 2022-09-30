@@ -1,0 +1,23 @@
+name: test-actions
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      NO_COVERAGE_BADGE_UPDATE: 1
+      PROMPT_NAME: test name
+      PROMPT_EMAIL: test+email@example.com
+    steps:
+      - run: uname -a
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "18.x"
+          registry-url: "https://registry.npmjs.org"
+      - run: |
+          yarn install
+          bun install
+      - run: yarn build
