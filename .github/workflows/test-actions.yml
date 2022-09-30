@@ -19,5 +19,4 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: |
           yarn install
-          bun install
       - run: yarn build
