@@ -3,7 +3,9 @@
   "version": "1.0.0-alpha.1",
   "main": "./esnext/index.js",
   "module": "./esnext/index.js",
-  "bin": "./esnext/cli.js",
+  "bin": {
+    "impack": "./esnext/cli.js"
+  },
   "types": "./esnext/index.d.ts",
   "typesVersions": {
     "*": {
