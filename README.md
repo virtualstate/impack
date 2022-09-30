@@ -1,6 +1,6 @@
 # `@virtualstate/impack`
 
-Fetch listener
+ESM Tree Importer
 
 [//]: # (badges)
 
