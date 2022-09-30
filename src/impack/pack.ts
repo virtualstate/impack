@@ -47,7 +47,8 @@ async function getFilePaths({ directory }: PackPaths): Promise<string[]> {
         .find();
 }
 
-export async function pack({ paths, argv }: PackOptions) {
+export async function pack(options: PackOptions) {
+    const { paths } = options;
     const importMap = await getImportMap(paths);
     const processedFiles = new Set();
 
@@ -58,7 +59,24 @@ export async function pack({ paths, argv }: PackOptions) {
         anyImportsProcessed = await importPaths();
     } while (anyImportsProcessed);
 
-    return await getCompleteImportMap();
+    const completeImportMap = await getCompleteImportMap();
+
+    console.log(
+        JSON.stringify(
+            {
+                ...completeImportMap,
+                ":debug": {
+                    options,
+                    processedFiles: [
+                        ...processedFiles
+                    ],
+                    importMap
+                }
+            },
+            undefined,
+            "  "
+        )
+    );
 
     async function getCompleteImportMap(): Promise<ImportMap> {
 
