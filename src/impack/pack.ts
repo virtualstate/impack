@@ -7,6 +7,7 @@ export interface PackPaths {
     importMap: string;
     directory: string;
     entrypoint?: string;
+    capnpTemplate?: string;
 }
 
 export interface PackOptions {
@@ -19,6 +20,12 @@ export interface ImportMap {
 }
 
 export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ".+";|(?:import\(".+"\)))/g;
+export const CAPNP_MODULES_REGEX = /modules\s*=\s*\[[^\]]*],?/g;
+
+async function getCapnPTemplate({ capnpTemplate }: PackPaths): Promise<string | undefined> {
+    if (!capnpTemplate) return undefined;
+    return await readFile(capnpTemplate, "utf-8").catch(() => undefined)
+}
 
 async function getImportMap({ importMap }: PackPaths): Promise<ImportMap> {
     const contents = await readFile(importMap, "utf-8");
@@ -48,9 +55,11 @@ async function getFilePaths({ directory }: PackPaths): Promise<string[]> {
 }
 
 export async function pack(options: PackOptions) {
-    const { paths } = options;
+    const { paths, argv } = options;
     const importMap = await getImportMap(paths);
     const processedFiles = new Set();
+
+    let requiredModules:  { moduleName: string, moduleTargetPath: string }[] = []
 
     const cwd = process.cwd();
 
@@ -61,22 +70,70 @@ export async function pack(options: PackOptions) {
 
     const completeImportMap = await getCompleteImportMap();
 
-    console.log(
-        JSON.stringify(
-            {
-                ...completeImportMap,
-                ":debug": {
-                    options,
-                    processedFiles: [
-                        ...processedFiles
-                    ],
-                    importMap
-                }
-            },
-            undefined,
-            "  "
-        )
-    );
+    const capnp = argv.includes("--capnp") || paths.capnpTemplate;
+    // const binary = argv.includes("--binary");
+
+    if (!capnp) {
+        console.log(
+            JSON.stringify(
+                {
+                    ...completeImportMap,
+                    ":debug": {
+                        options,
+                        processedFiles: [
+                            ...processedFiles
+                        ],
+                        importMap
+                    }
+                },
+                undefined,
+                "  "
+            )
+        );
+    } else {
+        const capnp = await getCapnP(completeImportMap);
+        console.log(capnp);
+    }
+
+    function tab(string: string, tabs = "  ") {
+        return string
+            .split("\n")
+            .map(value => `${tabs}${value}`)
+            .join("\n")
+    }
+
+    async function getCapnP(importMap: ImportMap): Promise<string> {
+        const modules = Object.entries(importMap.imports)
+            .map(
+                ([key, value]) => (
+                    `(name = "${key}", esModule = embed "${value}")`
+                )
+            )
+            .join(",\n");
+
+        const modulesString = `modules (\n${tab(modules)}\n);`;
+
+        const capnpTemplate = await getCapnPTemplate(paths);
+
+        if (!capnpTemplate) {
+            return `modules (\n${tab(modules)}\n);`;
+        }
+
+        let output = capnpTemplate;
+
+        let lines = output.split("\n");
+
+        for (const [foundString] of output.matchAll(CAPNP_MODULES_REGEX)) {
+            const suffix = foundString.endsWith(",") ? "," : "";
+            const line = lines.find(line => line.includes(foundString));
+            const [whitespace] = line.split(foundString);
+            output = output.replace(foundString, `modules = [\n${tab(modules, `${whitespace}${whitespace}`)}\n${whitespace}]${suffix}`);
+
+            lines = output.split("\n");
+        }
+
+        return output;
+    }
 
     async function getCompleteImportMap(): Promise<ImportMap> {
 
@@ -226,16 +283,14 @@ export async function pack(options: PackOptions) {
                         await fs.cp(`./node_modules/${moduleName}`, moduleTargetPath, {
                             recursive: true
                         });
-                        // newModules.push({
-                        //     moduleName,
-                        //     directory: moduleTargetPath
-                        // })
                     }
                 } else if (importMapReplacement) {
                     url = importMapReplacement;
                 }
 
                 const replacement = await getResolvedStatUrl(url);
+
+                // console.log(url, replacement);
 
                 return contents.replace(
                     statement,
@@ -267,12 +322,12 @@ export async function pack(options: PackOptions) {
     }
 }
 
-async function isFile(path: string) {
+export async function isFile(path: string) {
     const stat = await fs.stat(path).catch(() => undefined);
     return !!(stat && stat.isFile());
 }
 
-async function isDirectory(path: string) {
+export async function isDirectory(path: string) {
     const stat = await fs.stat(path).catch(() => undefined);
     return !!(stat && stat.isDirectory());
 }

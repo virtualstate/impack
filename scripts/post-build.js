@@ -71,5 +71,5 @@ if (!process.env.NO_COVERAGE_BADGE_UPDATE) {
     " "
   )}\n\n${tag}${readMeAfter}`;
   await fs.writeFile("README.md", readMeNext);
-  console.log("Wrote coverage badges!");
+  // console.log("Wrote coverage badges!");
 }

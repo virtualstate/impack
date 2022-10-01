@@ -2,6 +2,7 @@
   "imports": {
     "@virtualstate/promise": "./node_modules/@virtualstate/promise/esnext/index.js",
     "@virtualstate/promise/the-thing": "./node_modules/@virtualstate/promise/esnext/the-thing.js",
-    "@virtualstate/union": "./node_modules/@virtualstate/union/lib/index.js"
+    "@virtualstate/union": "./node_modules/@virtualstate/union/lib/index.js",
+    "filehound": "https://cdn.skypack.dev/filehound"
   }
 }

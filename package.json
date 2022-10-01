@@ -56,6 +56,7 @@
     "test:node": "export $(cat .env | xargs) && node --enable-source-maps esnext/tests/index.js",
     "coverage": "export $(cat .env | xargs) && c8 node esnext/tests/index.js && yarn postbuild",
     "test:workerd:compile": "workerd compile workerd-tests.capnp > workerd-tests",
-    "test:workerd": "yarn test:workerd:compile && ./workerd-tests --experimental"
+    "test:workerd": "yarn test:workerd:compile && ./workerd-tests --experimental",
+    "impack": "yarn build && ./esnext/cli.js"
   }
 }
