@@ -78,20 +78,21 @@ export async function pack(options: PackOptions) {
     const silent = argv?.includes("--silent");
 
     if (!capnp) {
+        const json = JSON.stringify(
+            completeImportMap,
+            undefined,
+            "  "
+        );
         if (!silent) {
-            console.log(
-                JSON.stringify(
-                    completeImportMap,
-                    undefined,
-                    "  "
-                )
-            );
+            console.log(json);
         }
+        return json;
     } else {
         const capnp = await getCapnP(completeImportMap);
         if (!silent) {
             console.log(capnp);
         }
+        return capnp;
     }
 
     function tab(string: string, tabs = "  ") {
