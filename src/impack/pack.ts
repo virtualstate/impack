@@ -111,12 +111,10 @@ export async function pack(options: PackOptions) {
             )
             .join(",\n");
 
-        const modulesString = `modules (\n${tab(modules)}\n);`;
-
         const capnpTemplate = await getCapnPTemplate(paths);
 
         if (!capnpTemplate) {
-            return `modules (\n${tab(modules)}\n);`;
+            return `modules = [\n${tab(modules)}\n]`;
         }
 
         let output = capnpTemplate;
