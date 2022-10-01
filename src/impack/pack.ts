@@ -4,7 +4,7 @@ import FileHound from "filehound";
 import path, {dirname, resolve} from "path";
 
 export interface PackPaths {
-    importMap: string;
+    importMap?: string;
     directory: string;
     entrypoint?: string;
     capnpTemplate?: string;
@@ -27,7 +27,12 @@ async function getCapnPTemplate({ capnpTemplate }: PackPaths): Promise<string | 
     return await readFile(capnpTemplate, "utf-8").catch(() => undefined)
 }
 
+function getDefaultMap(): ImportMap {
+    return { imports: {} }
+}
+
 async function getImportMap({ importMap }: PackPaths): Promise<ImportMap> {
+    if (!importMap) return getDefaultMap();
     const contents = await readFile(importMap, "utf-8");
     if (contents) {
         try {
@@ -42,7 +47,7 @@ async function getImportMap({ importMap }: PackPaths): Promise<ImportMap> {
 
         }
     }
-    return { imports: {} }
+    return getDefaultMap();
 }
 
 
@@ -59,8 +64,6 @@ export async function pack(options: PackOptions) {
     const importMap = await getImportMap(paths);
     const processedFiles = new Set();
 
-    let requiredModules:  { moduleName: string, moduleTargetPath: string }[] = []
-
     const cwd = process.cwd();
 
     let anyImportsProcessed: boolean;
@@ -76,16 +79,7 @@ export async function pack(options: PackOptions) {
     if (!capnp) {
         console.log(
             JSON.stringify(
-                {
-                    ...completeImportMap,
-                    ":debug": {
-                        options,
-                        processedFiles: [
-                            ...processedFiles
-                        ],
-                        importMap
-                    }
-                },
+                completeImportMap,
                 undefined,
                 "  "
             )

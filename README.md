@@ -12,6 +12,33 @@ ESM Tree Importer
 
 # Usage
 
+The below command will re-write all import & export urls so that they are 
+fully resolved.
+
+```shell
+npx @virtualstate/impack esnext
+```
+
+This command will take
+
+```javascript
+import { run } from "./path/to";
+```
+
+If `./path/to` exists, the import is kept as is
+
+If `./path/to.js` exists, the import will be re-written as:
+
+```javascript
+import { run } from "./path/to.js";
+```
+
+If `./path/to/index.js` exists, the import will be re-written as:
+
+```javascript
+import { run } from "./path/to/index.js";
+```
+
 ## [Import maps](https://github.com/WICG/import-maps)
 
 The below command will output an import map with all files in the folder & dependencies
@@ -21,13 +48,24 @@ The below command will output an import map with all files in the folder & depen
 npx @virtualstate/impack import-map.json esnext
 ```
 
-For example:
+For example giving the import map of:
 
 ```json
 {
   "imports": {
-    "esnext/impack/index.js": "esnext/impack/index.js",
-    "esnext/tests/index.js": "esnext/tests/index.js"
+    "@virtualstate/promise": "./node_modules/@virtualstate/promise/esnext/index.js"
+  }
+}
+```
+
+Along with re-writing all import urls, you will get the output:
+
+```json
+{
+  "imports": {
+    "@virtualstate/promise": "./esnext/@virtualstate/promise/esnext/index.js",
+    "esnext/path/to/inner.js": "esnext/path/to/inner.js",
+    "esnext/path/to/index.js": "esnext/path/to/index.js"
   }
 }
 ```
@@ -53,8 +91,9 @@ For Example:
 
 ```capnp
 modules = [
-  (name = "esnext/impack/index.js", esModule = embed "esnext/impack/index.js"),
-  (name = "esnext/tests/index.js", esModule = embed "esnext/tests/index.js")
+  (name = "esnext/@virtualstate/promise/esnext/index.js", esModule = embed "esnext/@virtualstate/promise/esnext/index.js"),
+  (name = "esnext/path/to/inner.js", esModule = embed "esnext/path/to/inner.js"),
+  (name = "esnext/path/to/index.js", esModule = embed "esnext/path/to/index.js")
 ]
 ```
 
@@ -77,8 +116,9 @@ Will output as:
 ```capnp
 const test :Workerd.Worker = (
    modules = [
-      (name = "esnext/impack/index.js", esModule = embed "esnext/impack/index.js"),
-      (name = "esnext/tests/index.js", esModule = embed "esnext/tests/index.js")
+      (name = "esnext/@virtualstate/promise/esnext/index.js", esModule = embed "esnext/@virtualstate/promise/esnext/index.js"),
+      (name = "esnext/path/to/inner.js", esModule = embed "esnext/path/to/inner.js"),
+      (name = "esnext/path/to/index.js", esModule = embed "esnext/path/to/index.js")
    ],
    compatibilityDate = "2022-09-16",
 );
