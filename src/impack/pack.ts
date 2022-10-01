@@ -11,7 +11,7 @@ export interface PackPaths {
 }
 
 export interface PackOptions {
-    argv: string[];
+    argv?: string[];
     paths: PackPaths
 }
 
@@ -73,20 +73,25 @@ export async function pack(options: PackOptions) {
 
     const completeImportMap = await getCompleteImportMap();
 
-    const capnp = argv.includes("--capnp") || paths.capnpTemplate;
+    const capnp = argv?.includes("--capnp") || paths.capnpTemplate;
     // const binary = argv.includes("--binary");
+    const silent = argv?.includes("--silent");
 
     if (!capnp) {
-        console.log(
-            JSON.stringify(
-                completeImportMap,
-                undefined,
-                "  "
-            )
-        );
+        if (!silent) {
+            console.log(
+                JSON.stringify(
+                    completeImportMap,
+                    undefined,
+                    "  "
+                )
+            );
+        }
     } else {
         const capnp = await getCapnP(completeImportMap);
-        console.log(capnp);
+        if (!silent) {
+            console.log(capnp);
+        }
     }
 
     function tab(string: string, tabs = "  ") {
