@@ -158,9 +158,10 @@ export async function pack(options: PackOptions) {
                 imports: Object.fromEntries(
                     [
                         ...new Set([
-                            ...urls,
                             entrypoint
-                                .replace(/^\.\//, "")
+                                .replace(/^\.\//, ""),
+                            ...urls,
+
                         ])
                     ].map(path => [path, path])
                 )
@@ -283,7 +284,32 @@ export async function pack(options: PackOptions) {
                         });
                     }
                 } else if (importMapReplacement) {
-                    url = importMapReplacement;
+
+                    if (importMapReplacement.startsWith("./")) {
+                        url = importMapReplacement
+                            .replace(/^\.\//, "")
+                        const shift = filePath
+                            .replace(`${paths.directory.replace(/^\.\//, "")}/`, "")
+                            .split("/")
+                            .map(() => "..");
+
+                        if (url.startsWith(paths.directory)) {
+                            url = url.slice(paths.directory.length);
+                            const srcShift = shift.slice(1);
+                            if (srcShift.length) {
+                                url = `${srcShift.join("/")}/${url}`
+                            } else {
+                                url = `./${url}`;
+                            }
+
+                        } else {
+                            url = `${shift.join("/")}/${url}`;
+                        }
+
+                    } else {
+                        url = importMapReplacement;
+                    }
+
                 }
 
                 const replacement = await getResolvedStatUrl(url);
