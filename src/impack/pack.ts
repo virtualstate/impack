@@ -2,7 +2,7 @@ import {readFile} from "node:fs/promises";
 import {promises as fs} from "node:fs";
 import FileHound from "filehound";
 import path, {dirname, resolve} from "node:path";
-import {ok} from "../is";
+import {isPromise, ok} from "../is";
 
 export interface PackPaths {
     importMap?: string;
@@ -11,9 +11,32 @@ export interface PackPaths {
     capnpTemplate?: string;
 }
 
+export interface ResolveIdOptions extends Record<string, unknown> {
+    isEntry: boolean;
+}
+
+export interface ResolvedObject extends Record<string, unknown> {
+    id: string;
+}
+export type Resolved = string | ResolvedObject;
+export type MaybeResolved = Resolved | undefined;
+
+// 👀
+// https://rollupjs.org/guide/en/
+// https://vitejs.dev/guide/api-plugin.html
+export interface ResolveFn {
+    (
+        source: string,
+        // This will always be undefined for now
+        importer: string | undefined,
+        options: ResolveIdOptions
+    ): MaybeResolved | Promise<MaybeResolved>
+}
+
 export interface PackOptions {
     argv?: string[];
-    paths: PackPaths
+    paths: PackPaths;
+    resolve?: ResolveFn | ResolveFn[];
 }
 
 export interface ImportMap {
@@ -61,7 +84,7 @@ async function getFilePaths({ directory }: PackPaths): Promise<string[]> {
 }
 
 export async function pack(options: PackOptions) {
-    const { paths, argv } = options;
+    const { paths, argv, resolve: externalResolves } = options;
     const importMap = await getImportMap(paths);
     const processedFiles = new Set();
 
@@ -274,7 +297,13 @@ export async function pack(options: PackOptions) {
                         if (packageImport) {
                             importMapReplacement = packageImport;
                         }
-                        console.log({ packageImport, importMapReplacement, url });
+                    }
+
+                    if (!importMapReplacement) {
+                        const resolved = await externalResolve(url);
+                        if (resolved) {
+                            importMapReplacement = resolved;
+                        }
                     }
 
                     if (!importMapReplacement && (url.startsWith("node:") || url.startsWith("#"))) {
@@ -346,6 +375,47 @@ export async function pack(options: PackOptions) {
                     // Allow another loop to continue resolution if
                     // there is more replacement that could happen
                     return getReplacementUrl(replacement);
+
+                    async function externalResolve(id: string) {
+
+                        for (const fn of getResolves()) {
+                            const maybe = fn(
+                                id,
+                                undefined,
+                                {
+                                    isEntry: filePath === paths.entrypoint,
+                                    // TODO Not yet resolved, but should be
+                                    assertions: {},
+                                    custom: {}
+                                }
+                            );
+                            let value: string;
+                            if (isPromise(maybe)) {
+                                value = getStringId(await maybe);
+                            } else {
+                                value = getStringId(maybe);
+                            }
+                            if (value && value !== id) {
+                                return value;
+                            }
+                        }
+
+
+                        function getStringId(value: MaybeResolved): string {
+                            if (!value) return undefined;
+                            if (typeof value === "string") return value;
+                            return value.id;
+                        }
+
+                        function getResolves(): ResolveFn[] {
+                            if (!externalResolves) return [];
+                            if (Array.isArray(externalResolves)) {
+                                return externalResolves;
+                            }
+                            return [externalResolves];
+                        }
+
+                    }
                 }
 
                 async function getResolvedStatUrl(url: string) {
