@@ -1,6 +1,6 @@
-import {cp, rmdir} from "fs/promises";
-import {pack} from "../../impack";
-import {dirname} from "path";
+import {cp, rmdir} from "node:fs/promises";
+import {pack} from "#impack";
+import {dirname} from "node:path";
 
 const directory = dirname(new URL(import.meta.url).pathname);
 

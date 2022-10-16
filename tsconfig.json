@@ -17,6 +17,7 @@
     "jsxFragmentFactory": "createFragment",
     "allowJs": true,
     "paths": {
+      "#impack": ["./impack"]
     },
     "resolveJsonModule": true
   },

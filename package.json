@@ -6,6 +6,10 @@
   "bin": {
     "impack": "./esnext/cli.js"
   },
+  "imports": {
+    "#impack": "./esnext/impack/index.js",
+    "#*": "./esnext/*/index.js"
+  },
   "types": "./esnext/index.d.ts",
   "typesVersions": {
     "*": {

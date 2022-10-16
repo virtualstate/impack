@@ -188,17 +188,17 @@ async function importPaths(buildPath, importMapPath = process.env.IMPORT_MAP, re
 await importPaths("esnext");
 
 
-await fs.rmdir("esnext-workerd").catch(error => void error);
-await fs.cp("esnext", "esnext-workerd", {
-    recursive: true
-});
-
-await importPaths("esnext-workerd", process.env.IMPORT_MAP_WORKERD || "import-map-workerd.json")
-
-while (newModules.length) {
-    newModules = [];
-    await importPaths("esnext-workerd", process.env.IMPORT_MAP_WORKERD || "import-map-workerd.json")
-}
+// await fs.rmdir("esnext-workerd").catch(error => void error);
+// await fs.cp("esnext", "esnext-workerd", {
+//     recursive: true
+// });
+//
+// await importPaths("esnext-workerd", process.env.IMPORT_MAP_WORKERD || "import-map-workerd.json")
+//
+// while (newModules.length) {
+//     newModules = [];
+//     await importPaths("esnext-workerd", process.env.IMPORT_MAP_WORKERD || "import-map-workerd.json")
+// }
 
 // console.log("Import Extensions done");
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {isFile, pack} from "./impack";
-import {dirname} from "path";
+import {dirname} from "node:path";
 
 const argv = process.argv;
 

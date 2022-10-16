@@ -1,7 +1,8 @@
-import {readFile} from "fs/promises";
-import {promises as fs} from "fs";
+import {readFile} from "node:fs/promises";
+import {promises as fs} from "node:fs";
 import FileHound from "filehound";
-import path, {dirname, resolve} from "path";
+import path, {dirname, resolve} from "node:path";
+import {ok} from "../is";
 
 export interface PackPaths {
     importMap?: string;
@@ -180,6 +181,8 @@ export async function pack(options: PackOptions) {
 
             if (!file) return [];
 
+            // console.log(file);
+
             const statements = file.match(STATEMENT_REGEX);
 
             if (!statements?.length) return [];
@@ -187,6 +190,7 @@ export async function pack(options: PackOptions) {
             const urls = statements
                 .map(statement => statement.match(/"(.+)"/)[1])
                 .filter(Boolean)
+                .filter(url => url.startsWith("../") || url.startsWith("./"))
                 .map(url => resolve(directory, url)
                     .replace(`${cwd}/`, ""))
 
@@ -248,71 +252,7 @@ export async function pack(options: PackOptions) {
             async function replaceStatement(contents: string, statement: string) {
                 const initial = statement.match(/"(.+)"/)[1];
 
-                let url = initial;
-
-                const importMapReplacement = importMap.imports[url];
-
-                // External dependency
-                if (importMapReplacement && importMapReplacement.startsWith("./node_modules/")) {
-                    let moduleName,
-                        fileName;
-
-                    const moduleUrl = importMapReplacement.replace("./node_modules/", "")
-                    if (moduleUrl.startsWith("@")) {
-                        const [namespace, scopedName, ...rest] = moduleUrl
-                            .split("/")
-                        moduleName = `${namespace}/${scopedName}`;
-                        fileName = rest.join("/");
-                    } else {
-                        const [name, ...rest] = moduleUrl
-                            .split("/");
-                        moduleName = name;
-                        fileName = rest.join("/");
-                    }
-
-                    const filePathParts = filePath
-                        .replace(`${paths.directory.replace(/^\.\//, "")}/`, "")
-                        .split("/");
-                    const srcShift = [".", ...filePathParts.slice(1).map(() => "..")].join("/");
-
-                    const moduleTargetPath = `${paths.directory}/${moduleName}`;
-                    url = `${srcShift}/${moduleName}/${fileName}`;
-
-                    if (!await isDirectory(moduleTargetPath)) {
-                        await fs.cp(`./node_modules/${moduleName}`, moduleTargetPath, {
-                            recursive: true
-                        });
-                    }
-                } else if (importMapReplacement) {
-
-                    if (importMapReplacement.startsWith("./")) {
-                        url = importMapReplacement
-                            .replace(/^\.\//, "")
-                        const shift = filePath
-                            .replace(`${paths.directory.replace(/^\.\//, "")}/`, "")
-                            .split("/")
-                            .map(() => "..");
-
-                        if (url.startsWith(paths.directory)) {
-                            url = url.slice(paths.directory.length);
-                            const srcShift = shift.slice(1);
-                            if (srcShift.length) {
-                                url = `${srcShift.join("/")}/${url}`
-                            } else {
-                                url = `./${url}`;
-                            }
-
-                        } else {
-                            url = `${shift.join("/")}/${url}`;
-                        }
-
-                    } else {
-                        url = importMapReplacement;
-                    }
-
-                }
-
-                const replacement = await getResolvedStatUrl(url);
+                const replacement = await getReplacementUrl(initial);
 
                 // console.log(url, replacement);
 
@@ -323,6 +263,90 @@ export async function pack(options: PackOptions) {
                         replacement
                     )
                 );
+
+                async function getReplacementUrl(url: string): Promise<string> {
+                    const initial = url;
+
+                    let importMapReplacement = importMap.imports[url];
+
+                    if (!importMapReplacement && url.startsWith("#")) {
+                        const packageImport = await getPackageImport(url);
+                        if (packageImport) {
+                            importMapReplacement = packageImport;
+                        }
+                        console.log({ packageImport, importMapReplacement, url });
+                    }
+
+                    if (!importMapReplacement && (url.startsWith("node:") || url.startsWith("#"))) {
+                        return url;
+                    }
+
+                    // External dependency
+                    if (importMapReplacement && importMapReplacement.startsWith("./node_modules/")) {
+                        let moduleName,
+                            fileName;
+
+                        const moduleUrl = importMapReplacement.replace("./node_modules/", "")
+                        if (moduleUrl.startsWith("@")) {
+                            const [namespace, scopedName, ...rest] = moduleUrl
+                                .split("/")
+                            moduleName = `${namespace}/${scopedName}`;
+                            fileName = rest.join("/");
+                        } else {
+                            const [name, ...rest] = moduleUrl
+                                .split("/");
+                            moduleName = name;
+                            fileName = rest.join("/");
+                        }
+
+                        const filePathParts = filePath
+                            .replace(`${paths.directory.replace(/^\.\//, "")}/`, "")
+                            .split("/");
+                        const srcShift = [".", ...filePathParts.slice(1).map(() => "..")].join("/");
+
+                        const moduleTargetPath = `${paths.directory}/${moduleName}`;
+                        url = `${srcShift}/${moduleName}/${fileName}`;
+
+                        if (!await isDirectory(moduleTargetPath)) {
+                            await fs.cp(`./node_modules/${moduleName}`, moduleTargetPath, {
+                                recursive: true
+                            });
+                        }
+                    } else if (importMapReplacement) {
+                        if (importMapReplacement.startsWith("./")) {
+                            const shared = getSharedParentPath(paths.directory, dirname(importMapReplacement));
+
+                            const shift = filePath
+                                .replace(`${shared.replace(/^\.\//, "")}/`, "")
+                                .split("/")
+                                .map(() => "..");
+
+                            if (shared) {
+                                url = importMapReplacement.slice(shared.length).substring(1);
+                                const srcShift = shift.slice(1);
+                                if (srcShift.length) {
+                                    url = `${srcShift.join("/")}/${url}`
+                                } else {
+                                    url = `./${url}`;
+                                }
+
+                            } else {
+                                url = importMapReplacement
+                                    .replace(/^\.\//, "")
+                                url = `${shift.join("/")}/${url}`;
+                            }
+
+                            // console.log({ shared, url })
+                        } else {
+                            url = importMapReplacement;
+                        }
+                    }
+                    const replacement = await getResolvedStatUrl(url);
+                    if (replacement === initial) return replacement;
+                    // Allow another loop to continue resolution if
+                    // there is more replacement that could happen
+                    return getReplacementUrl(replacement);
+                }
 
                 async function getResolvedStatUrl(url: string) {
                     const [existing, js, index] = await Promise.all([
@@ -341,6 +365,96 @@ export async function pack(options: PackOptions) {
                     }
                     return url;
                 }
+
+            }
+
+            async function getPackageImport(url: string): Promise<string> {
+                interface Package {
+                    imports: Record<string, string>
+                }
+
+                let packageDirectory = dirname(filePath);
+
+                ok(url.startsWith("#"));
+
+                let match;
+                do {
+                    match = await getPackageMatch(packageDirectory);
+                    if (!match) {
+                        if (packageDirectory === cwd) {
+                            return undefined;
+                        }
+                        packageDirectory = dirname(packageDirectory);
+                    }
+                } while (!match);
+
+                return match;
+
+                async function getPackageMatch(dir: string) {
+                    const { imports } = await getPackage(dir);
+
+                    if (!imports) return undefined;
+
+                    for (const key in imports) {
+                        const match = getMatch(key);
+                        if (match) {
+                            return match;
+                        }
+                    }
+
+                    function getMatch(key: string) {
+                        if (!key.startsWith("#")) return undefined; // ??
+                        if (key === url) {
+                            return imports[key];
+                        }
+                        if (!key.includes("*")) {
+                            return undefined;
+                        }
+
+                        const keySplit = key.split("*");
+
+                        ok(keySplit.length === 2, "Expected one * in import");
+
+                        const [prefix, suffix] = keySplit;
+
+                        ok(prefix, "Expected prefix for import, at least #");
+
+                        if (!url.startsWith(prefix)) {
+                            return undefined;
+                        }
+                        if (suffix && !url.endsWith(suffix)) {
+                            return undefined;
+                        }
+                        const value = imports[key];
+
+                        if (!value.includes("*")) {
+                            return value;
+                        }
+
+                        let wildcard = url.substring(prefix.length);
+                        if (suffix) {
+                            wildcard = url.substring(0, -suffix.length)
+                        }
+
+                        return value.replaceAll("*", wildcard);
+                    }
+                }
+
+                async function getPackage(dir: string): Promise<Package> {
+                    const path = `${dir}/package.json`
+                    if (!await isFile(path)) {
+                        if (dir === cwd) {
+                            return { imports: {} }
+                        }
+                        return getPackage(
+                            // Jump to parent dir
+                            dirname(dir)
+                        );
+                    }
+                    const file = await readFile(path, "utf-8");
+                    return JSON.parse(file);
+                }
+
             }
         }
     }
@@ -354,5 +468,23 @@ export async function isFile(path: string) {
 export async function isDirectory(path: string) {
     const stat = await fs.stat(path).catch(() => undefined);
     return !!(stat && stat.isDirectory());
+}
+
+function getSharedParentPath(pathA: string, pathB: string) {
+    const splitA = pathA.split("/");
+    const splitB = pathB.split("/");
+    let shared;
+    do {
+        const nextA = splitA.shift();
+        const nextB = splitB.shift();
+        if (nextA === nextB) {
+            if (shared) {
+                shared = `${shared}/${nextA}`;
+            } else {
+                shared = nextA;
+            }
+        }
+    } while (splitA.length && splitB.length);
+    return shared;
 }
 
