@@ -63,7 +63,7 @@ Along with re-writing all import urls, you will get the output:
 ```json
 {
   "imports": {
-    "@virtualstate/promise": "./esnext/@virtualstate/promise/esnext/index.js",
+    "@virtualstate/promise": "esnext/@virtualstate/promise/esnext/index.js",
     "esnext/path/to/inner.js": "esnext/path/to/inner.js",
     "esnext/path/to/index.js": "esnext/path/to/index.js"
   }
@@ -78,6 +78,41 @@ npx @virtualstate/impack import-map.json esnext/tests/index.js
 ```
 
 Any dependency urls that are not provided in the initial import map, are not replaced. 
+
+## [Node subpath patterns](https://nodejs.org/api/packages.html#subpath-imports)
+
+If you were to have an import that used a node subpath pattern, starting with 
+`#`, if a replacement is not found in the provided import map, the closest 
+package.json with a matching pattern will be used. 
+
+For example if your `package.json` 
+
+```json
+{
+  "imports": {
+    "#internal/*.js": "./src/internal/*.js"
+  }
+}
+```
+
+And used the import: 
+
+```javascript
+import Users from "#internal/users";
+import Storage from "#internal/storage";
+```
+
+You would get the output:
+
+```json
+{
+  "imports": {
+    "src/index.js": "src/index.js",
+    "src/internal/users.js": "src/internal/users.js",
+    "src/internal/storage.js": "src/internal/storage.js"
+  }
+}
+```
 
 ## [Cap'n Proto](https://capnproto.org/)
 
