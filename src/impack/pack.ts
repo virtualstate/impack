@@ -43,7 +43,7 @@ export interface ImportMap {
     imports: Record<string, string>
 }
 
-export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ".+";|(?:import\(".+"\)))/g;
+export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ".+"|(?:import\(".+"\)))/g;
 export const CAPNP_MODULES_REGEX = /modules\s*=\s*\[[^\]]*],?/g;
 
 async function getCapnPTemplate({ capnpTemplate }: PackPaths): Promise<string | undefined> {
