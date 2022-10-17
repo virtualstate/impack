@@ -1,6 +1,6 @@
 {
   "name": "@virtualstate/impack",
-  "version": "1.0.0-alpha.10",
+  "version": "1.0.0-alpha.11",
   "main": "./esnext/index.js",
   "module": "./esnext/index.js",
   "bin": {
