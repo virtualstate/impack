@@ -47,7 +47,7 @@ export interface ImportMap {
     imports: Record<string, string>
 }
 
-export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ".+"|(?:import\(".+"\)))/g;
+export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ['"].+['"]|(?:import\(['"].+["']\)))/g;
 
 // Must be empty modules & bindings to be auto updated
 export const CAPNP_MODULES_REGEX = /modules\s*=\s*\[],?/g;
@@ -500,7 +500,7 @@ export async function ${serviceName}(event) {
             }
 
             async function replaceStatement(contents: string, statement: string) {
-                const initial = statement.match(/"(.+)"/)[1];
+                const initial = statement.match(/["'](.+)["']/)[1];
 
                 const replacement = await getReplacementUrl(initial);
 
