@@ -2,7 +2,7 @@ import FileHound from "filehound";
 import { promises as fs } from "fs";
 import path from "path";
 
-export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ".+";|(?:import\(".+"\)))/g;
+export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)?\s+['"].+['"]|(?:import\s+\(['"].+["']\))|(?:import\(['"].+["']\)))/g;
 
 async function isFile(file) {
     const stat = await fs.stat(file).catch(() => undefined);

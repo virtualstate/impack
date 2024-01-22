@@ -3,6 +3,7 @@
 node_modules
 esnext
 esnext-workerd
+esnext-test
 coverage
 .env
 /test-results/

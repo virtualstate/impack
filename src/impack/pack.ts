@@ -3,10 +3,8 @@ import {promises as fs} from "node:fs";
 import FileHound from "filehound";
 import path, {dirname, resolve} from "node:path";
 import {isPromise, ok} from "../is";
-import {isLike} from "@virtualstate/focus";
 import {writeFile} from "fs/promises";
 import {createHash } from "node:crypto";
-import {bind} from "bluebird";
 
 export interface PackPaths {
     importMap?: string;
@@ -47,7 +45,7 @@ export interface ImportMap {
     imports: Record<string, string>
 }
 
-export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)? ['"].+['"]|(?:import\(['"].+["']\)))/g;
+export const STATEMENT_REGEX = /(?:(?:import|export)(?: .+ from)?\s+['"].+['"]|(?:import\s+\(['"].+["']\))|(?:import\(['"].+["']\)))/g;
 
 // Must be empty modules & bindings to be auto updated
 export const CAPNP_MODULES_REGEX = /modules\s*=\s*\[],?/g;
@@ -485,7 +483,12 @@ export async function ${serviceName}(event) {
                 initialContents
             );
 
-            await fs.writeFile(filePath, contents, "utf-8");
+            try {
+
+                await fs.writeFile(filePath, contents, "utf-8");
+            } catch (error) {
+                console.warn(`Failed to write ${filePath}`)
+            }
 
             async function process(initialContents: string) {
                 const statements = initialContents.match(STATEMENT_REGEX);
@@ -782,6 +785,6 @@ function getSharedParentPath(pathA: string, pathB: string) {
             }
         }
     } while (splitA.length && splitB.length);
-    return shared;
+    return shared || pathA;
 }
 

@@ -42,7 +42,6 @@
   "author": "Fabian Cook <hello@fabiancook.dev>",
   "license": "MIT",
   "dependencies": {
-    "@virtualstate/focus": "^1.4.10-alpha.4",
     "filehound": "^1.17.4"
   },
   "devDependencies": {
