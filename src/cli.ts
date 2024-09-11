@@ -23,12 +23,16 @@ if (await isFile(path)) {
     directory = path;
 }
 
+const exclude = argv.filter(value => value.startsWith("--exclude="))
+    .map(value => value.replace("--exclude=", "").replace(/^['"](.+)['"]$/, "$1"))
+
 await pack({
     argv,
     paths: {
         importMap,
         directory,
         entrypoint,
-        capnpTemplate
+        capnpTemplate,
+        exclude
     }
 })

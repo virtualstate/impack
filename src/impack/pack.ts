@@ -1,7 +1,7 @@
 import {readFile} from "node:fs/promises";
 import {promises as fs} from "node:fs";
 import FileHound from "filehound";
-import path, {dirname, resolve} from "node:path";
+import {dirname, resolve, join} from "node:path";
 import {isPromise, ok} from "../is";
 import {writeFile} from "fs/promises";
 import {createHash } from "node:crypto";
@@ -11,6 +11,7 @@ export interface PackPaths {
     directory: string;
     entrypoint?: string;
     capnpTemplate?: string;
+    exclude?: string | string[];
 }
 
 export interface ResolveIdOptions extends Record<string, unknown> {
@@ -84,12 +85,19 @@ async function getImportMap({ importMap }: PackPaths): Promise<ImportMap> {
 }
 
 
-async function getFilePaths({ directory }: PackPaths): Promise<string[]> {
-    return await FileHound.create()
+async function getFilePaths({ directory, exclude }: PackPaths): Promise<string[]> {
+    let hound = FileHound.create()
         .paths(directory)
-        .discard("node_modules")
+        .discard(join(directory, "node_modules"))
         .ext("js")
-        .find();
+    if (Array.isArray(exclude)) {
+        hound = exclude.reduce((hound, exclude) => {
+            return hound.discard(exclude)
+        }, hound)
+    } else if (exclude) {
+        hound = hound.discard(exclude);
+    }
+    return hound.find();
 }
 
 export async function pack(options: PackOptions) {
@@ -650,9 +658,9 @@ export async function ${serviceName}(event) {
 
                 async function getResolvedStatUrl(url: string) {
                     const [existing, js, index] = await Promise.all([
-                        isFile(path.resolve(path.dirname(filePath), url)),
-                        isFile(path.resolve(path.dirname(filePath), url + ".js")),
-                        isFile(path.resolve(path.dirname(filePath), url + "/index.js")),
+                        isFile(resolve(dirname(filePath), url)),
+                        isFile(resolve(dirname(filePath), url + ".js")),
+                        isFile(resolve(dirname(filePath), url + "/index.js")),
                     ]);
                     if (existing) {
                         return url;
